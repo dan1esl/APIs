@@ -52,7 +52,7 @@ const cadastroProduto = async (req, res) => {
       ncm == null ||
       stamp_id == null
     ) {
-      return res.status(400).json({ erro: "Preencha os campos corretamente," });
+      return res.status(400).json({ erro: "Preencha os campos corretamente." });
     }
     const { data, error } = await supabase
       .from("product")
