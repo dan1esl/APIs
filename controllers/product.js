@@ -4,7 +4,7 @@ const getProdutos = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("product")
-      .select("*");
+      .select("mix_of_products, brand, product_image,");
 
     if (error) return res.status(500).json({ erro: error.message });
 
