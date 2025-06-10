@@ -16,12 +16,16 @@ const getPurchaseOrder = async (req, res) => {
 }
 
 const createOrder = async (req, res) =>{
-    const {order_id, unit_id, quantity_of_boxes, buyer_id} = req.body;
-    const { data, error } = await supabase
+    const { unit_id, quantity_of_boxes, buyer_id} = req.body;
+
+    if (!unit_id || !quantity_of_boxes || !buyer_id) {
+      return res.status(400).json({ error: "Preencha os campos obrigatórios" });
+    }
+    try {
+      const { data, error } = await supabase
       .from("purchase_order")
       .insert([
         {
-          order_id,
           unit_id,
           quantity_of_boxes,
           buyer_id
@@ -31,7 +35,9 @@ const createOrder = async (req, res) =>{
     if (error) 
       return res.status(500).json({ erro: error.message });
         res.status(201).json(data);
-    };
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao criar a ordem de compra" });
+    }};
 
 module.exports = {
     getPurchaseOrder,
