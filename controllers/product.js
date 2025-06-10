@@ -44,19 +44,20 @@ const getProdutosId = async (req, res) => {
 
 const cadastroProduto = async (req, res) => {
   try {
-    const { brand, mix_of_products, ncm, stamp_id } = req.body;
+    const { brand, mix_of_products, ncm, stamp_id, product_image } = req.body;
 
     if (
       brand == null ||
       mix_of_products == null ||
       ncm == null ||
-      stamp_id == null
+      stamp_id == null ||
+      product_image == null
     ) {
       return res.status(400).json({ erro: "Preencha os campos corretamente." });
     }
     const { data, error } = await supabase
       .from("product")
-      .insert([{ brand, mix_of_products, ncm, stamp_id }])
+      .insert([{ brand, mix_of_products, ncm, stamp_id, product_image }])
       .select();
 
     if (error) {
