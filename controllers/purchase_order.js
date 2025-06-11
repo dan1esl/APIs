@@ -16,9 +16,9 @@ const getPurchaseOrder = async (req, res) => {
 }
 
 const createOrder = async (req, res) =>{
-    const { unit_id, quantity_of_boxes, buyer_id} = req.body;
+    const { unit_id, quantity_of_boxes} = req.body;
 
-    if (!unit_id || !quantity_of_boxes || !buyer_id) {
+    if (!unit_id || !quantity_of_boxes) {
       return res.status(400).json({ error: "Preencha os campos obrigatórios" });
     }
     try {
@@ -27,8 +27,7 @@ const createOrder = async (req, res) =>{
       .insert([
         {
           unit_id,
-          quantity_of_boxes,
-          buyer_id
+          quantity_of_boxes
         }
       ])
       .select();
