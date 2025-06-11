@@ -43,17 +43,17 @@ const cadastroAdmin = async (req, res) => {
   const {
     admin_username,
     admin_email,
-    admin_password,
-    admin_phone_number,
-    admin_cnpj
+    admin_password
+   // admin_phone_number
+   // admin_cnpj
   } = req.body;
   
   if (
     !admin_username ||
     !admin_email ||
-    !admin_password ||
-    !admin_phone_number ||
-    !admin_cnpj
+    !admin_password
+   // !admin_phone_number
+    //!admin_cnpj
   ) {
     return res
       .status(400)
@@ -81,7 +81,7 @@ if (!validarSenha(admin_password)) {
   });
 }
 
- if (admin_phone_number.length < 9) {
+/* if (admin_phone_number.length < 9) {
     return res.status(400).json({ erro: "O número de telefone deve ter pelo menos 9 dígitos." });
   }
 
@@ -95,7 +95,7 @@ if (!validarSenha(admin_password)) {
     return res.status(400).json({ erro: "Número já cadastrado." });
   }
 
-
+*/
   const { data, error } = await supabase
     .from("user_admin")
     .insert([
@@ -103,8 +103,8 @@ if (!validarSenha(admin_password)) {
         admin_username,
         admin_email,
         admin_password: hashedPassword,
-        admin_cnpj,
-        admin_phone_number
+       // admin_cnpj,
+       // admin_phone_number
       },
     ])
     .select("*");
