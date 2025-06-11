@@ -61,7 +61,7 @@ const cadastroComprador = async (req, res) => {
     buyer_username,
     buyer_city,
     buyer_email,
-    buyer_phone_number,
+   // buyer_phone_number,
     buyer_password,
     buyer_cnpj,
   } = req.body;
@@ -72,7 +72,7 @@ const cadastroComprador = async (req, res) => {
     !buyer_username ||
     !buyer_city ||
     !buyer_email ||
-    !buyer_phone_number ||
+   // !buyer_phone_number ||
     !buyer_password ||
     !buyer_cnpj
   ) {
@@ -99,7 +99,7 @@ const cadastroComprador = async (req, res) => {
       erro: "Escolha uma senha mais segura. Entre 6 e 18 caracteres, com pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial.",
     });
   }
-
+/*
   if (buyer_phone_number.length < 9) {
     return res.status(400).json({
       erro: "O número de telefone deve ter pelo menos 9 dígitos.",
@@ -115,7 +115,7 @@ const cadastroComprador = async (req, res) => {
   if (existingNumber) {
     return res.status(400).json({ erro: "Número já cadastrado." });
   }
-
+*/
   const salt = await bcrypt.genSalt(10);
   const hash = await bcrypt.hash(req.body.buyer_password, salt);
   console.log({ hash });
@@ -127,7 +127,7 @@ const cadastroComprador = async (req, res) => {
       buyer_username,
       buyer_city,
       buyer_email,
-      buyer_phone_number,
+     // buyer_phone_number,
       buyer_password: hash,
       buyer_cnpj,
     },
@@ -203,7 +203,7 @@ const editarComprador = async (req, res) => {
       buyer_username,
       buyer_city,
       buyer_email,
-      buyer_phone_number,
+    //  buyer_phone_number,
       buyer_password,
       buyer_cnpj,
     } = req.body;
@@ -212,7 +212,7 @@ const editarComprador = async (req, res) => {
       !buyer_username &&
       !buyer_city &&
       !buyer_email &&
-      !buyer_phone_number &&
+   //   !buyer_phone_number &&
       !buyer_password &&
       !buyer_cnpj
     ) {
@@ -225,8 +225,8 @@ const editarComprador = async (req, res) => {
     if (buyer_city) updatebuyer.buyer_city = buyer_city;
     if (buyer_email) updatebuyer.buyer_email = buyer_email;
     if (buyer_cnpj) updatebuyer.buyer_cnpj = buyer_cnpj;
-    if (buyer_phone_number)
-      updatebuyer.buyer_phone_number = buyer_phone_number;
+  /*  if (buyer_phone_number)
+      updatebuyer.buyer_phone_number = buyer_phone_number; */
     if (buyer_password) {
       if (!validarSenha(buyer_password)) {
         return res.status(400).json({

@@ -57,7 +57,7 @@ const cadastroAdmin = async (req, res) => {
   ) {
     return res
       .status(400)
-      .json({ erro: "Usuário, email, senha e número são obrigatórios." });
+      .json({ erro: "Usuário, email e senha são obrigatórios." });
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -128,14 +128,13 @@ const editarAdmin = async (req, res) => {
     return res.status(400).json({ erro: "Informe o id do produtor." });
   }
 
-    const { admin_username, admin_password, admin_email, admin_phone_number } =
+    const { admin_username, admin_password, admin_email} =
       req.body;
 
     if (
       !admin_username &&
       !admin_password &&
-      !admin_email &&
-      !admin_phone_number
+      !admin_email 
     ) {
       return res
         .status(400)
@@ -144,7 +143,6 @@ const editarAdmin = async (req, res) => {
     const updateadmin = {};
     if (admin_username) updateadmin.admin_username = admin_username;
     if (admin_email) updateadmin.admin_email = admin_email;
-    if (admin_phone_number) updateadmin.admin_phone_number = admin_phone_number;
     if (admin_password) {
       if (!validarSenha(admin_password)) {
         return res.status(400).json({
