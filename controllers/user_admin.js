@@ -2,6 +2,9 @@ require("dotenv").config();
 const supabase = require("../services/supabaseClient");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const {sendResetCode} = require("../services/emailService");
+
+const codes = {};
 
 const getAdmin = async (req, res) => {
   try {
@@ -231,11 +234,71 @@ const deletarAdmin = async (req, res) => {
   }
 };
 
+const requestPasswordReset = async (req, res) => {
+  const { admin_email } = req.body;
+  try {
+    const { data: user, error } = await supabase
+      .from("user_admin")
+      .select("*")
+      .eq("admin_email", admin_email)
+      .single();
+    if (!user) {
+      return res.status(404).json({ erro: "Usuário não encontrado" });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    codes[admin_email] = code;
+
+    await sendResetCode(admin_email, code);
+    return res.status(200).json({ message: "Código de redefinição enviado para o e-mail." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ erro: "Erro ao solicitar redefinição de senha." });
+  }};
+
+  const verifyResetCode = async (req, res) => {
+    const { admin_email, code } = req.body;
+    try {
+      if (codes[admin_email] !== code) {
+        return res.status(400).json({ erro: "Código inválido." });
+      }
+      return res.status(200).json({ message: "Código verificado com sucesso." });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ erro: "Erro ao verificar o código." });
+    }
+  };
+
+  const resetPassword = async (req, res) => {
+    const { admin_email, code, new_password } = req.body;
+    try {
+      if (codes[admin_email] !== code) {
+        return res.status(400).json({ erro: "Código inválido." });
+      }
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(new_password, salt);
+
+      await supabase
+        .from("user_admin")
+        .update({ admin_password: hashedPassword })
+        .eq("admin_email", admin_email);
+
+      delete codes[admin_email];
+      return res.status(200).json({ message: "Senha redefinida com sucesso." });  
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ erro: "Erro ao redefinir a senha." });
+    }
+  };
+
 module.exports = {
   getAdmin,
   getAdminId,
   cadastroAdmin,
   editarAdmin,
   deletarAdmin,
-  loginAdmin
+  loginAdmin,
+  requestPasswordReset,
+  verifyResetCode,
+  resetPassword,
 };
