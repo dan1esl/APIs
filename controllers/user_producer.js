@@ -66,22 +66,22 @@ const cadastroProdutor = async (req, res) => {
     producer_username,
     producer_email,
     producer_password,
-    /* producer_city,
+    producer_city,
     producer_address,
     producer_phone_number,
-    producer_cnpj,*/
+    producer_cnpj,
   } = req.body;
 
   if (
     !producer_username ||
-    // !producer_address ||
-    // !producer_city ||
+    !producer_address ||
+    !producer_city ||
     !producer_email ||
-    // !producer_phone_number ||
-    !producer_password
-    // !producer_cnpj
+    !producer_phone_number ||
+    !producer_password ||
+    !producer_cnpj
   ) {
-    return res.status(400).json({ erro: "Preencha os campos obrigatórios," });
+    return res.status(400).json({ erro: "Preencha os campos obrigatórios." });
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -104,7 +104,7 @@ const cadastroProdutor = async (req, res) => {
       erro: "Escolha uma senha mais segura. Entre 6 e 18 caracteres, com pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial.",
     });
   }
-  /*
+
   if (producer_phone_number.length < 9) {
     return res.status(400).json({
       erro: "O número de telefone deve ter pelo menos 9 dígitos.",
@@ -120,7 +120,7 @@ const cadastroProdutor = async (req, res) => {
   if (existingNumber) {
     return res.status(400).json({ erro: "Número já cadastrado." });
   }
-*/
+
   const salt = await bcrypt.genSalt(10);
   const hash = await bcrypt.hash(req.body.producer_password, salt);
   console.log({ hash });
@@ -128,12 +128,12 @@ const cadastroProdutor = async (req, res) => {
   const { data, error } = await supabase.from("user_producer").insert([
     {
       producer_username,
-      //  producer_address,
-      //  producer_city,
+      producer_address,
+      producer_city,
       producer_email,
-      //  producer_phone_number,
+      producer_phone_number,
       producer_password: hash,
-      //  producer_cnpj,
+      producer_cnpj,
     },
   ]);
   if (error) {
@@ -199,19 +199,19 @@ const editarProdutor = async (req, res) => {
     }
     const {
       producer_username,
-      //  producer_address,
-      //  producer_city,
+      producer_address,
+      producer_city,
       producer_email,
-      //  producer_phone_number,
+      producer_phone_number,
       producer_password,
     } = req.body;
 
     if (
       !producer_username &&
-      //  !producer_address &&
-      //   !producer_city &&
+      !producer_address &&
+      !producer_city &&
       !producer_email &&
-      //   !producer_phone_number &&
+      !producer_phone_number &&
       !producer_password
     ) {
       return res
@@ -220,11 +220,11 @@ const editarProdutor = async (req, res) => {
     }
     const updateProducer = {};
     if (producer_username) updateProducer.producer_username = producer_username;
-    //  if (producer_address) updateProducer.producer_address = producer_address;
-    //   if (producer_city) updateProducer.producer_city = producer_city;
+    if (producer_address) updateProducer.producer_address = producer_address;
+    if (producer_city) updateProducer.producer_city = producer_city;
     if (producer_email) updateProducer.producer_email = producer_email;
-    //  if (producer_phone_number)
-    //  updateProducer.producer_phone_number = producer_phone_number;
+    if (producer_phone_number)
+      updateProducer.producer_phone_number = producer_phone_number;
     if (producer_password) {
       if (!validarSenha(producer_password)) {
         return res.status(400).json({
