@@ -107,7 +107,7 @@ const cadastroProdutor = async (req, res) => {
       erro: "O número de telefone deve ter pelo menos 9 dígitos.",
     });
   }
-*/
+
   const { data: existingNumber } = await supabase
     .from("user_producer")
     .select("producer_phone_number")
@@ -117,7 +117,7 @@ const cadastroProdutor = async (req, res) => {
   if (existingNumber) {
     return res.status(400).json({ erro: "Número já cadastrado." });
   }
-
+*/
   const salt = await bcrypt.genSalt(10);
   const hash = await bcrypt.hash(req.body.producer_password, salt);
   console.log({ hash });
