@@ -2,6 +2,9 @@ require("dotenv").config();
 const supabase = require("../services/supabaseClient");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { sendResetCode } = require("../services/emailService");
+
+const codes = {};
 
 const getProdutor = async (req, res) => {
   try {
@@ -62,8 +65,8 @@ const cadastroProdutor = async (req, res) => {
   const {
     producer_username,
     producer_email,
-    producer_password
-   /* producer_city,
+    producer_password,
+    /* producer_city,
     producer_address,
     producer_phone_number,
     producer_cnpj,*/
@@ -71,12 +74,12 @@ const cadastroProdutor = async (req, res) => {
 
   if (
     !producer_username ||
-   // !producer_address ||
-   // !producer_city ||
+    // !producer_address ||
+    // !producer_city ||
     !producer_email ||
-   // !producer_phone_number ||
+    // !producer_phone_number ||
     !producer_password
-   // !producer_cnpj
+    // !producer_cnpj
   ) {
     return res.status(400).json({ erro: "Preencha os campos obrigatórios," });
   }
@@ -101,7 +104,7 @@ const cadastroProdutor = async (req, res) => {
       erro: "Escolha uma senha mais segura. Entre 6 e 18 caracteres, com pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial.",
     });
   }
-/*
+  /*
   if (producer_phone_number.length < 9) {
     return res.status(400).json({
       erro: "O número de telefone deve ter pelo menos 9 dígitos.",
@@ -125,12 +128,12 @@ const cadastroProdutor = async (req, res) => {
   const { data, error } = await supabase.from("user_producer").insert([
     {
       producer_username,
-    //  producer_address,
-    //  producer_city,
+      //  producer_address,
+      //  producer_city,
       producer_email,
-    //  producer_phone_number,
-      producer_password: hash
-    //  producer_cnpj,
+      //  producer_phone_number,
+      producer_password: hash,
+      //  producer_cnpj,
     },
   ]);
   if (error) {
@@ -196,19 +199,19 @@ const editarProdutor = async (req, res) => {
     }
     const {
       producer_username,
-    //  producer_address,
-    //  producer_city,
+      //  producer_address,
+      //  producer_city,
       producer_email,
-    //  producer_phone_number,
-      producer_password
+      //  producer_phone_number,
+      producer_password,
     } = req.body;
 
     if (
       !producer_username &&
-    //  !producer_address &&
-   //   !producer_city &&
+      //  !producer_address &&
+      //   !producer_city &&
       !producer_email &&
-   //   !producer_phone_number &&
+      //   !producer_phone_number &&
       !producer_password
     ) {
       return res
@@ -217,10 +220,10 @@ const editarProdutor = async (req, res) => {
     }
     const updateProducer = {};
     if (producer_username) updateProducer.producer_username = producer_username;
-  //  if (producer_address) updateProducer.producer_address = producer_address;
- //   if (producer_city) updateProducer.producer_city = producer_city;
+    //  if (producer_address) updateProducer.producer_address = producer_address;
+    //   if (producer_city) updateProducer.producer_city = producer_city;
     if (producer_email) updateProducer.producer_email = producer_email;
-  //  if (producer_phone_number)
+    //  if (producer_phone_number)
     //  updateProducer.producer_phone_number = producer_phone_number;
     if (producer_password) {
       if (!validarSenha(producer_password)) {
@@ -273,6 +276,76 @@ const deletarProdutor = async (req, res) => {
   }
 };
 
+const requestPasswordReset = async (req, res) => {
+  const { producer_email } = req.body;
+  try {
+    const { data: user } = await supabase
+      .from("user_producer")
+      .select("*")
+      .eq("producer_email", producer_email)
+      .single();
+    if (!user) {
+      return res.status(404).json({ erro: "Usuário não encontrado." });
+    }
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    codes[producer_email] = code;
+
+    await sendResetCode(producer_email, code);
+    return res
+      .status(200)
+      .json({ message: "Código de redefinição enviado para o e-mail." });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ erro: "Erro ao solicitar redefinição de senha." });
+  }
+};
+
+const verifyResetCode = async (req, res) => {
+  const { producer_email, code } = req.body;
+  try {
+    if (codes[producer_email] !== code) {
+      return res.status(400).json({ erro: "Código inválido." });
+    }
+    return res.status(200).json({ message: "Código verificado com sucesso." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ erro: "Erro ao verificar código." });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  const { producer_email, new_password } = req.body;
+  try {
+    if (!codes[producer_email]) {
+      return res
+        .status(400)
+        .json({ erro: "Código de redefinição não solicitado." });
+    }
+
+    if (!new_password || !validarSenha(new_password)) {
+      return res.status(400).json({
+        erro: "Escolha uma senha mais segura. Entre 6 e 18 caracteres, com pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial.",
+      });
+    }
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(new_password, salt);
+
+    await supabase
+      .from("user_producer")
+      .update({ producer_password: hash })
+      .eq("producer_email", producer_email);
+
+    delete codes[producer_email];
+
+    return res.status(200).json({ message: "Senha redefinida com sucesso." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ erro: "Erro ao redefinir senha." });
+  }
+};
+
 module.exports = {
   getProdutor,
   getProdutorId,
@@ -280,4 +353,7 @@ module.exports = {
   loginProdutor,
   editarProdutor,
   deletarProdutor,
+  requestPasswordReset,
+  verifyResetCode,
+  resetPassword,
 };
