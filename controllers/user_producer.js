@@ -2,6 +2,9 @@ require("dotenv").config();
 const supabase = require("../services/supabaseClient");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { sendResetCode } = require("../services/emailService");
+
+const codes = {};
 
 const getProdutor = async (req, res) => {
   try {
@@ -61,11 +64,11 @@ const validarSenha = (producer_password) => {
 const cadastroProdutor = async (req, res) => {
   const {
     producer_username,
-    producer_address,
-    producer_city,
     producer_email,
-    producer_phone_number,
     producer_password,
+    producer_city,
+    producer_address,
+    producer_phone_number,
     producer_cnpj,
   } = req.body;
 
@@ -78,18 +81,18 @@ const cadastroProdutor = async (req, res) => {
     !producer_password ||
     !producer_cnpj
   ) {
-    return res.status(400).json({ erro: "Preencha os campos obrigatórios," });
+    return res.status(400).json({ erro: "Preencha os campos obrigatórios." });
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(buyer_email)) {
+  if (!emailRegex.test(producer_email)) {
     return res.status(400).json({ erro: "Email inválido." });
   }
 
   const { data: existingUser } = await supabase
-    .from("user_buyer")
-    .select("buyer_id")
-    .eq("buyer_email", buyer_email)
+    .from("user_producer")
+    .select("producer_id")
+    .eq("producer_email", producer_email)
     .single();
 
   if (existingUser) {
@@ -273,6 +276,76 @@ const deletarProdutor = async (req, res) => {
   }
 };
 
+const requestPasswordReset = async (req, res) => {
+  const { producer_email } = req.body;
+  try {
+    const { data: user } = await supabase
+      .from("user_producer")
+      .select("*")
+      .eq("producer_email", producer_email)
+      .single();
+    if (!user) {
+      return res.status(404).json({ erro: "Usuário não encontrado." });
+    }
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    codes[producer_email] = code;
+
+    await sendResetCode(producer_email, code);
+    return res
+      .status(200)
+      .json({ message: "Código de redefinição enviado para o e-mail." });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ erro: "Erro ao solicitar redefinição de senha." });
+  }
+};
+
+const verifyResetCode = async (req, res) => {
+  const { producer_email, code } = req.body;
+  try {
+    if (codes[producer_email] !== code) {
+      return res.status(400).json({ erro: "Código inválido." });
+    }
+    return res.status(200).json({ message: "Código verificado com sucesso." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ erro: "Erro ao verificar código." });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  const { producer_email, new_password } = req.body;
+  try {
+    if (!codes[producer_email]) {
+      return res
+        .status(400)
+        .json({ erro: "Código de redefinição não solicitado." });
+    }
+
+    if (!new_password || !validarSenha(new_password)) {
+      return res.status(400).json({
+        erro: "Escolha uma senha mais segura. Entre 6 e 18 caracteres, com pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial.",
+      });
+    }
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(new_password, salt);
+
+    await supabase
+      .from("user_producer")
+      .update({ producer_password: hash })
+      .eq("producer_email", producer_email);
+
+    delete codes[producer_email];
+
+    return res.status(200).json({ message: "Senha redefinida com sucesso." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ erro: "Erro ao redefinir senha." });
+  }
+};
+
 module.exports = {
   getProdutor,
   getProdutorId,
@@ -280,4 +353,7 @@ module.exports = {
   loginProdutor,
   editarProdutor,
   deletarProdutor,
+  requestPasswordReset,
+  verifyResetCode,
+  resetPassword,
 };
