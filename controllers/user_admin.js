@@ -2,12 +2,13 @@ require("dotenv").config();
 const supabase = require("../services/supabaseClient");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { sendResetCode } = require("../services/emailService");
+
+const codes = {};
 
 const getAdmin = async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("user_admin")
-      .select("*");
+    const { data, error } = await supabase.from("user_admin").select("*");
     if (error) throw error;
     res.status(200).json(data);
   } catch (error) {
@@ -32,9 +33,9 @@ const getAdminId = async (req, res) => {
 };
 
 const validarSenha = (admin_password) => {
-  const senhaRegex = 
-  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?._&])[A-Za-z\d@$!%*?._&]{6,18}$/;
-  return senhaRegex.test(admin_password); 
+  const senhaRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?._&])[A-Za-z\d@$!%*?._&]{6,18}$/;
+  return senhaRegex.test(admin_password);
 };
 
 const cadastroAdmin = async (req, res) => {
@@ -43,16 +44,16 @@ const cadastroAdmin = async (req, res) => {
   const {
     admin_username,
     admin_email,
-    admin_password
-   // admin_phone_number
-   // admin_cnpj
+    admin_password,
+    // admin_phone_number
+    // admin_cnpj
   } = req.body;
-  
+
   if (
     !admin_username ||
     !admin_email ||
     !admin_password
-   // !admin_phone_number
+    // !admin_phone_number
     //!admin_cnpj
   ) {
     return res
@@ -65,7 +66,7 @@ const cadastroAdmin = async (req, res) => {
     return res.status(400).json({ erro: "Email inválido." });
   }
 
-  const { data: existingUser} = await supabase
+  const { data: existingUser } = await supabase
     .from("user_admin")
     .select("admin_id")
     .eq("admin_email", admin_email)
@@ -75,13 +76,13 @@ const cadastroAdmin = async (req, res) => {
     return res.status(400).json({ erro: "Email já cadastrado." });
   }
 
-if (!validarSenha(admin_password)) {
-  return res.status(400).json({
-    erro: "Escolha uma senha mais segura. Entre 6 e 18 caracteres, com pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial.",
-  });
-}
+  if (!validarSenha(admin_password)) {
+    return res.status(400).json({
+      erro: "Escolha uma senha mais segura. Entre 6 e 18 caracteres, com pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial.",
+    });
+  }
 
-/* if (admin_phone_number.length < 9) {
+  /* if (admin_phone_number.length < 9) {
     return res.status(400).json({ erro: "O número de telefone deve ter pelo menos 9 dígitos." });
   }
 
@@ -103,12 +104,12 @@ if (!validarSenha(admin_password)) {
         admin_username,
         admin_email,
         admin_password: hashedPassword,
-       // admin_cnpj,
-       // admin_phone_number
+        // admin_cnpj,
+        // admin_phone_number
       },
     ])
     .select("*");
-  
+
   if (error) {
     console.log(error);
     return res.status(400).json({ erro: "Erro ao criar usuário" });
@@ -123,19 +124,13 @@ const editarAdmin = async (req, res) => {
   const { admin_id } = req.user;
 
   try {
+    if (parseInt(id) !== admin_id) {
+      return res.status(400).json({ erro: "Informe o id do admin." });
+    }
 
-  if (parseInt(id) !== admin_id) {
-    return res.status(400).json({ erro: "Informe o id do produtor." });
-  }
+    const { admin_username, admin_password, admin_email } = req.body;
 
-    const { admin_username, admin_password, admin_email} =
-      req.body;
-
-    if (
-      !admin_username &&
-      !admin_password &&
-      !admin_email 
-    ) {
+    if (!admin_username && !admin_password && !admin_email) {
       return res
         .status(400)
         .json({ erro: "Preencha pelo menos um campo para editar." });
@@ -165,10 +160,9 @@ const editarAdmin = async (req, res) => {
     return res
       .status(200)
       .json({ message: "Admin editado com sucesso.", admin: data[0] });
-  } catch (err) { 
+  } catch (err) {
     console.error("Erro ao editar Admin:", err);
     return res.status(500).json({ erro: "Erro ao editar Admin." });
-
   }
 };
 
@@ -193,7 +187,7 @@ const loginAdmin = async (req, res) => {
     if (!samePassword) {
       return res.status(401).json({ erro: "Senha incorreta" });
     }
-    
+
     const token = jwt.sign(
       { admin_id: user.admin_id, admin_email: user.admin_email },
       process.env.JWT_SECRET,
@@ -201,7 +195,7 @@ const loginAdmin = async (req, res) => {
     );
     return res.status(200).json({
       message: "Login realizado com sucesso.",
-      token
+      token,
     });
   } catch (error) {
     console.error(error);
@@ -231,11 +225,83 @@ const deletarAdmin = async (req, res) => {
   }
 };
 
+const requestPasswordReset = async (req, res) => {
+  const { admin_email } = req.body;
+  try {
+    const { data: user } = await supabase
+      .from("user_admin")
+      .select("*")
+      .eq("admin_email", admin_email)
+      .single();
+    if (!user) {
+      return res.status(404).json({ erro: "Usuário não encontrado" });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    codes[admin_email] = code;
+
+    await sendResetCode(admin_email, code);
+    return res
+      .status(200)
+      .json({ message: "Código de redefinição enviado para o e-mail." });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ erro: "Erro ao solicitar redefinição de senha." });
+  }
+};
+
+const verifyResetCode = async (req, res) => {
+  const { admin_email, code } = req.body;
+  try {
+    if (codes[admin_email] !== code) {
+      return res.status(400).json({ erro: "Código inválido." });
+    }
+    return res.status(200).json({ message: "Código verificado com sucesso." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ erro: "Erro ao verificar o código." });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  const { admin_email, code, new_password } = req.body;
+  try {
+    if (codes[admin_email] !== code) {
+      return res.status(400).json({ erro: "Código inválido." });
+    }
+
+    if (!validarSenha(new_password)) {
+      return res.status(400).json({
+        erro: "Escolha uma senha mais segura. Entre 6 e 18 caracteres, com pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial.",
+      });
+    }
+    
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(new_password, salt);
+
+    await supabase
+      .from("user_admin")
+      .update({ admin_password: hashedPassword })
+      .eq("admin_email", admin_email);
+
+    delete codes[admin_email];
+    return res.status(200).json({ message: "Senha redefinida com sucesso." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ erro: "Erro ao redefinir a senha." });
+  }
+};
+
 module.exports = {
   getAdmin,
   getAdminId,
   cadastroAdmin,
   editarAdmin,
   deletarAdmin,
-  loginAdmin
+  loginAdmin,
+  requestPasswordReset,
+  verifyResetCode,
+  resetPassword,
 };
