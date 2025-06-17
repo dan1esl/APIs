@@ -28,8 +28,6 @@ const getProdutorId = async (req, res) => {
     if (!id) {
       return res.status(400).json({ erro: "Informe o id" });
     }
-
-    try {
       const { data, error } = await supabase
         .from("user_producer")
         .select(
@@ -50,6 +48,22 @@ const getProdutorId = async (req, res) => {
     } catch (err) {
       return res.status(500).json({ erro: "Erro ao buscar Produtor" });
     }
+};
+
+const getProdutorUser = async (req, res) => {
+  const { producer_id } = req.user;
+  try {
+    const { data, error } = await supabase
+      .from("user_producer")
+      .select("producer_id, producer_username, producer_address, producer_city, producer_email, producer_phone_number, producer_cnpj")
+      .eq("producer_id", producer_id)
+      .maybeSingle();
+
+    if (error) return res.status(500).json({ erro: error.message });
+    if (!data) {
+      return res.status(404).json({ erro: "Produtor não encontrado!" });
+    }
+    return res.json(data);
   } catch (err) {
     return res.status(500).json({ erro: "Erro ao buscar Produtor" });
   }
@@ -195,7 +209,7 @@ const editarProdutor = async (req, res) => {
 
   try {
     if (parseInt(id) !== producer_id) {
-      return res.status(400).json({ erro: "Informe o id do produtor." });
+      return res.status(400).json({ erro: "Você não tem permissão para alterar os dados." });
     }
     const {
       producer_username,
@@ -356,4 +370,5 @@ module.exports = {
   requestPasswordReset,
   verifyResetCode,
   resetPassword,
+  getProdutorUser,
 };
