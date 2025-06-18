@@ -32,6 +32,26 @@ const getAdminId = async (req, res) => {
   }
 };
 
+const getAdminUser = async (req, res) => {
+  const { admin_id } = req.user;
+  try {
+    const { data, error } = await supabase
+      .from("user_admin")
+      .select("admin_id, admin_username, admin_email")
+      .eq("admin_id", admin_id)
+      .maybeSingle();
+
+    if (error) return res.status(500).json({ erro: error.message });
+    if (!data) {
+      return res.status(404).json({ erro: "Admin não encontrado!" });
+    }
+    return res.json(data);
+  } catch (err) {
+    return res.status(500).json({ erro: "Erro ao buscar Admin" });
+  }
+};
+
+
 const validarSenha = (admin_password) => {
   const senhaRegex =
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?._&])[A-Za-z\d@$!%*?._&]{6,18}$/;
@@ -125,7 +145,7 @@ const editarAdmin = async (req, res) => {
 
   try {
     if (parseInt(id) !== admin_id) {
-      return res.status(400).json({ erro: "Informe o id do admin." });
+      return res.status(400).json({ erro: "Você não tem permissão para alterar os dados." });
     }
 
     const { admin_username, admin_password, admin_email } = req.body;
@@ -304,4 +324,5 @@ module.exports = {
   requestPasswordReset,
   verifyResetCode,
   resetPassword,
+  getAdminUser,
 };
