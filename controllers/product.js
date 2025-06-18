@@ -81,9 +81,9 @@ const editarProdutos = async (req, res) => {
   }
 
   try {
-    const { brand, mix_of_products, ncm, stamp_id } = req.body;
+    const { brand, mix_of_products, ncm, stamp_id, product_image } = req.body;
 
-    if (!brand && !mix_of_products && !ncm && !stamp_id) {
+    if (!brand && !mix_of_products && !ncm && !stamp_id && !product_image) {
       return res
         .status(400)
         .json({ erro: "Preencha pelo menos um campo para editar." });
@@ -94,6 +94,8 @@ const editarProdutos = async (req, res) => {
     if (mix_of_products) updateProduct.mix_of_products = mix_of_products;
     if (ncm) updateProduct.ncm = ncm;
     if (stamp_id) updateProduct.stamp_id = stamp_id;
+    if (product_image) updateProduct.product_image = product_image;
+
 
     const { data, error } = await supabase
       .from("product")
